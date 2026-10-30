@@ -39,6 +39,13 @@ class Config(BaseSettings):
         Path("/data/weather.json"),
         title="The path to write the weather.json file.",
     )
+    efd_name: str = Field(
+        "usdf_efd", min_length=1, title="Repertoire EFD database label"
+    )
+    efd_token_file_path: Path = Field(
+        Path("/var/run/secrets/weatherbroadcaster/efd-token"),
+        title="Path to a Gafaelfawr token with read:sasquatch scope",
+    )
     weather_fetch_timeout: float = Field(
         30,
         gt=0,

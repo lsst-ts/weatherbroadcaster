@@ -27,11 +27,49 @@ the volume read-write and runs:
 The sidecar updates immediately when its pod starts, and then at the configured
 interval. Kubernetes restarts it if the updater process exits.
 
+EFD authentication
+==================
+
+The updater reads a Gafaelfawr token with ``read:sasquatch`` scope from
+``WEATHERBROADCASTER_EFD_TOKEN_FILE_PATH`` (default:
+``/var/run/secrets/weatherbroadcaster/efd-token``). It uses
+``REPERTOIRE_BASE_URL`` to request fresh credentials from Repertoire on every
+update. ``WEATHERBROADCASTER_EFD_NAME`` selects the Repertoire database label
+and defaults to ``usdf_efd``. For example, set
+``WEATHERBROADCASTER_EFD_NAME=usdfdev_efd`` to select the development EFD.
+For example, a development deployment can query the USDF production EFD with:
+
+.. code-block:: yaml
+
+   REPERTOIRE_BASE_URL: "https://usdf-rsp.slac.stanford.edu/repertoire"
+   WEATHERBROADCASTER_EFD_NAME: "usdf_efd"
+
+The mounted token must be valid for the selected Repertoire environment and
+have ``read:sasquatch`` scope; a development token does not automatically grant
+access to production Repertoire.
+
+The token and Repertoire URL are needed only by
+the updater sidecar. Repertoire credentials are passed to the EFD client in a
+temporary, private ``EFDAUTH`` file that is removed after client creation.
+
+The local Kubernetes manifest expects a Secret named
+``weatherbroadcaster-efd-token`` with a ``token`` key. The Phalanx chart
+creates a Gafaelfawr service token with ``read:sasquatch`` scope and mounts
+it in both update containers. It supplies ``REPERTOIRE_BASE_URL`` from
+``global.repertoireUrl``.
+
 EFD request timeout
 ===================
 
+InfluxDB failures log the HTTP status, content type, and final endpoint
+(without URL credentials or query parameters) at error level.
+Set ``WEATHERBROADCASTER_LOG_LEVEL=DEBUG`` to log this metadata for successful
+responses as well. Response bodies, authentication headers, and credentials
+are not logged.
+
 ``WEATHERBROADCASTER_WEATHER_FETCH_TIMEOUT`` sets the maximum number of
-seconds to wait for all EFD weather queries. It defaults to 30 seconds. A
+seconds to wait for Repertoire discovery and all EFD weather queries. It
+defaults to 30 seconds. A
 timed-out update exits with an error, leaving the existing cache file intact.
 
 When using ``weatherbroadcaster update --loop``, a timeout is retried twice,
