@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 import structlog
+from aiohttp import ClientResponse
 from lsst_efd_client import EfdClient
 from lsst_efd_client.aioinflux import InfluxDBClient
 from rubin.repertoire import DiscoveryClient, InfluxDatabaseWithCredentials
@@ -97,6 +98,38 @@ def _latest_timestamp(*results: Any) -> datetime:
     return datetime.now(tz=UTC)
 
 
+async def _check_influx_response(response: ClientResponse) -> None:
+    """Report HTTP and invalid JSON failures without exposing secrets."""
+    log = structlog.get_logger("weatherbroadcaster")
+    details = {
+        "efd_name": config.efd_name,
+        "endpoint": str(
+            response.url.with_user(None).with_query(None).with_fragment(None)
+        ),
+        "status": response.status,
+        "content_type": response.headers.get("Content-Type"),
+    }
+    log.debug("Received InfluxDB response.", **details)
+    if response.status >= 400:
+        log.error("InfluxDB HTTP request failed.", **details)
+        raise RuntimeError(
+            f"InfluxDB HTTP request failed (HTTP {response.status})"
+        )
+
+    body = await response.read()
+    try:
+        json.loads(body)
+    except ValueError:
+        log.error(  # noqa: TRY400 -- omit exception data containing the body
+            "InfluxDB returned invalid JSON.",
+            response_bytes=len(body),
+            **details,
+        )
+        raise RuntimeError(
+            f"InfluxDB returned invalid JSON (HTTP {response.status})"
+        ) from None
+
+
 def _create_efd_client(info: InfluxDatabaseWithCredentials) -> EfdClient:
     """Pass Repertoire credentials through the EFD client's EFDAUTH API."""
     username = info.username
@@ -115,6 +148,7 @@ def _create_efd_client(info: InfluxDatabaseWithCredentials) -> EfdClient:
         mode="async",
         output="dataframe",
         timeout=config.weather_fetch_timeout,
+        raise_for_status=_check_influx_response,
     )
     previous_auth = os.environ.get("EFDAUTH")
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as auth_file:

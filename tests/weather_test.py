@@ -282,6 +282,10 @@ async def test_real_efd_client_uses_efdauth(
         == "https://example.com:443/influxdb/{endpoint}"
     )
     assert client._influx_client.db == "efd"
+    assert (
+        client._influx_client.opts["raise_for_status"]
+        is weather._check_influx_response
+    )
 
 
 def test_read_mean_missing_column() -> None:

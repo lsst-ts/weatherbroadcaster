@@ -50,6 +50,12 @@ it in both update containers. It supplies ``REPERTOIRE_BASE_URL`` from
 EFD request timeout
 ===================
 
+InfluxDB failures log the HTTP status, content type, and final endpoint
+(without URL credentials or query parameters) at error level.
+Set ``WEATHERBROADCASTER_LOG_LEVEL=DEBUG`` to log this metadata for successful
+responses as well. Response bodies, authentication headers, and credentials
+are not logged.
+
 ``WEATHERBROADCASTER_WEATHER_FETCH_TIMEOUT`` sets the maximum number of
 seconds to wait for Repertoire discovery and all EFD weather queries. It
 defaults to 30 seconds. A
