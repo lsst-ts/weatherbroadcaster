@@ -44,16 +44,17 @@ class _InfluxClient:
 
 
 class _EfdClient:
+    expected_name: ClassVar[str] = "usdf_efd"
     queries: ClassVar[list[str]] = []
     influx_client = _InfluxClient()
     auth_path: ClassVar[Path]
 
     def __init__(self, *, efd_name: str, client: object) -> None:
-        assert efd_name == "usdf_efd"
+        assert efd_name == self.expected_name
         assert client is not None
         type(self).auth_path = Path(os.environ["EFDAUTH"])
         assert self.auth_path.stat().st_mode & 0o777 == 0o600
-        assert json.loads(self.auth_path.read_text())["usdf_efd"] == {
+        assert json.loads(self.auth_path.read_text())[self.expected_name] == {
             "url": "https://example.com/influxdb",
             "database": "efd",
             "schema_registry": "https://example.com/registry",
@@ -142,14 +143,18 @@ def discovery(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("efd_name", ["usdf_efd", "usdfdev_efd"])
 async def test_fetch_weather_data(
     monkeypatch: pytest.MonkeyPatch,
     discovery: _DiscoveryClient,
+    efd_name: str,
 ) -> None:
     """Test fetching weather data from the EFD."""
     _EfdClient.queries = []
     _EfdClient.influx_client = _InfluxClient()
     monkeypatch.setattr(weather, "EfdClient", _EfdClient)
+    monkeypatch.setattr(config, "efd_name", efd_name)
+    monkeypatch.setattr(_EfdClient, "expected_name", efd_name)
     monkeypatch.setenv("EFDAUTH", "previous-auth-file")
 
     data = await weather.fetch_weather_data()
@@ -174,7 +179,7 @@ async def test_fetch_weather_data(
     assert data.LON == -70.7494166667
     assert data.HEIGHT == 2647
     assert _EfdClient.influx_client.closed
-    assert discovery.requested == ("usdf_efd", "secret-token")
+    assert discovery.requested == (efd_name, "secret-token")
     assert discovery.closed
     assert not _EfdClient.auth_path.exists()
     assert os.environ["EFDAUTH"] == "previous-auth-file"
@@ -198,15 +203,18 @@ async def test_fetch_weather_data_times_out_and_closes_client(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("efd_name", ["usdf_efd", "usdfdev_efd"])
 async def test_fetch_weather_data_without_credentials(
     monkeypatch: pytest.MonkeyPatch,
     discovery: _DiscoveryClient,
+    efd_name: str,
 ) -> None:
     """Fail closed when Repertoire does not know the EFD database."""
     discovery.info = None
     monkeypatch.setattr(weather, "EfdClient", _EfdClient)
+    monkeypatch.setattr(config, "efd_name", efd_name)
 
-    with pytest.raises(RuntimeError, match="no usdf_efd"):
+    with pytest.raises(RuntimeError, match=f"no {efd_name}"):
         await weather.fetch_weather_data()
 
     assert discovery.closed

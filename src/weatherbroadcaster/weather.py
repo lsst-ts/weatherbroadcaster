@@ -118,11 +118,11 @@ def _create_efd_client(info: InfluxDatabaseWithCredentials) -> EfdClient:
     )
     previous_auth = os.environ.get("EFDAUTH")
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as auth_file:
-        json.dump({"usdf_efd": info.model_dump(mode="json")}, auth_file)
+        json.dump({config.efd_name: info.model_dump(mode="json")}, auth_file)
         auth_file.flush()
         os.environ["EFDAUTH"] = auth_file.name
         try:
-            return EfdClient(efd_name="usdf_efd", client=influx_client)
+            return EfdClient(efd_name=config.efd_name, client=influx_client)
         finally:
             if previous_auth is None:
                 os.environ.pop("EFDAUTH", None)
@@ -165,9 +165,11 @@ async def fetch_weather_data() -> Data:
             raise RuntimeError("EFD token file is empty")
         discovery = DiscoveryClient()
         try:
-            info = await discovery.influxdb_credentials("usdf_efd", token)
+            info = await discovery.influxdb_credentials(config.efd_name, token)
             if info is None:
-                raise RuntimeError("Repertoire has no usdf_efd database")
+                raise RuntimeError(
+                    f"Repertoire has no {config.efd_name} database"
+                )
             async with _create_efd_client(info) as client:
                 (
                     temperature_result,
