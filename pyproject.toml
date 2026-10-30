@@ -26,7 +26,7 @@ dependencies = [
     "pydantic>2",
     "pydantic-settings>=2",
     "rubin-gafaelfawr>=15.2.4",
-    "rubin-repertoire>=0.12.1",
+    "rubin-repertoire>=0.13.1",
     "safir>=5",
     "uvicorn[standard]>=0.34",
 ]
@@ -34,7 +34,7 @@ dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://weatherbroadcaster.lsst.io"
-Source = "https://github.com/lsst-sqre/weatherbroadcaster"
+Source = "https://github.com/lsst-ts/weatherbroadcaster"
 
 [project.scripts]
 weatherbroadcaster = "weatherbroadcaster.cli:main"
@@ -159,4 +159,4 @@ skip_fragments = "_template.md.jinja"
 [tool.setuptools_scm]
 
 [tool.uv.sources]
-lsst-efd-client = { git = "https://github.com/lsst-ts/lsst-efd-client", tag = "v1.0.0" }
+lsst-efd-client = { git = "https://github.com/lsst-ts/lsst-efd-client", tag = "v1.1.2" }

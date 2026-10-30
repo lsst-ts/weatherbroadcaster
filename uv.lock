@@ -1173,8 +1173,8 @@ wheels = [
 
 [[package]]
 name = "lsst-efd-client"
-version = "1.0.0"
-source = { git = "https://github.com/lsst-ts/lsst-efd-client?tag=v1.0.0#3f4cef55573d78f3b9dded326e39e79fef02f4f4" }
+version = "1.1.2"
+source = { git = "https://github.com/lsst-ts/lsst-efd-client?tag=v1.1.2#314e97f60659d89f66e6783f40ddef8d0690874f" }
 dependencies = [
     { name = "aiohttp" },
     { name = "astropy" },
@@ -3077,11 +3077,11 @@ requires-dist = [
     { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "click", specifier = ">=8" },
     { name = "fastapi", specifier = ">=0.100" },
-    { name = "lsst-efd-client", git = "https://github.com/lsst-ts/lsst-efd-client?tag=v1.0.0" },
+    { name = "lsst-efd-client", git = "https://github.com/lsst-ts/lsst-efd-client?tag=v1.1.2" },
     { name = "pydantic", specifier = ">2" },
     { name = "pydantic-settings", specifier = ">=2" },
     { name = "rubin-gafaelfawr", specifier = ">=15.2.4" },
-    { name = "rubin-repertoire", specifier = ">=0.12.1" },
+    { name = "rubin-repertoire", specifier = ">=0.13.1" },
     { name = "safir", specifier = ">=5" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]

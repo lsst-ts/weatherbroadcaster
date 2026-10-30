@@ -27,11 +27,29 @@ the volume read-write and runs:
 The sidecar updates immediately when its pod starts, and then at the configured
 interval. Kubernetes restarts it if the updater process exits.
 
+EFD authentication
+==================
+
+The updater reads a Gafaelfawr token with ``read:sasquatch`` scope from
+``WEATHERBROADCASTER_EFD_TOKEN_FILE_PATH`` (default:
+``/var/run/secrets/weatherbroadcaster/efd-token``). It uses
+``REPERTOIRE_BASE_URL`` to request fresh ``usdf_efd`` credentials from
+Repertoire on every update. The token and Repertoire URL are needed only by
+the updater sidecar. Repertoire credentials are passed to the EFD client in a
+temporary, private ``EFDAUTH`` file that is removed after client creation.
+
+The local Kubernetes manifest expects a Secret named
+``weatherbroadcaster-efd-token`` with a ``token`` key. The Phalanx chart
+creates a Gafaelfawr service token with ``read:sasquatch`` scope and mounts
+it in both update containers. It supplies ``REPERTOIRE_BASE_URL`` from
+``global.repertoireUrl``.
+
 EFD request timeout
 ===================
 
 ``WEATHERBROADCASTER_WEATHER_FETCH_TIMEOUT`` sets the maximum number of
-seconds to wait for all EFD weather queries. It defaults to 30 seconds. A
+seconds to wait for Repertoire discovery and all EFD weather queries. It
+defaults to 30 seconds. A
 timed-out update exits with an error, leaving the existing cache file intact.
 
 When using ``weatherbroadcaster update --loop``, a timeout is retried twice,

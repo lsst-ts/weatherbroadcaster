@@ -43,10 +43,21 @@ spec:
               value: INFO
             - name: WEATHERBROADCASTER_WEATHER_UPDATE_INTERVAL
               value: "3600"
+            - name: REPERTOIRE_BASE_URL
+              value: https://usdf-rsp.slac.stanford.edu/repertoire
           volumeMounts:
             - name: weather-data
               mountPath: /data
+            - name: efd-token
+              mountPath: /var/run/secrets/weatherbroadcaster
+              readOnly: true
       volumes:
         - name: weather-data
           persistentVolumeClaim:
             claimName: weatherbroadcaster-weather-data
+        - name: efd-token
+          secret:
+            secretName: weatherbroadcaster-efd-token
+            items:
+              - key: token
+                path: efd-token

@@ -1,14 +1,18 @@
 """Fetch weather data from the EFD."""
 
 import asyncio
-import inspect
+import json
 import math
+import os
+import tempfile
 from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
 import structlog
 from lsst_efd_client import EfdClient
+from lsst_efd_client.aioinflux import InfluxDBClient
+from rubin.repertoire import DiscoveryClient, InfluxDatabaseWithCredentials
 
 from .config import config
 from .models import Data
@@ -93,20 +97,41 @@ def _latest_timestamp(*results: Any) -> datetime:
     return datetime.now(tz=UTC)
 
 
-async def _close_client(client: EfdClient) -> None:
-    influx_client = getattr(client, "_influx_client", None)
-    close = getattr(influx_client, "close", None)
-    if close is None:
-        return
+def _create_efd_client(info: InfluxDatabaseWithCredentials) -> EfdClient:
+    """Pass Repertoire credentials through the EFD client's EFDAUTH API."""
+    username = info.username
+    password = info.password
+    if not username or not password:
+        raise RuntimeError("Repertoire returned no EFD credentials")
 
-    result = close()
-    if inspect.isawaitable(result):
-        await result
+    influx_client = InfluxDBClient(
+        host=info.url.host,
+        port=info.url.port or (443 if info.url.scheme == "https" else 80),
+        path=(info.url.path or "/").rstrip("/") + "/",
+        ssl=info.url.scheme == "https",
+        username=username,
+        password=password.get_secret_value(),
+        db=info.database,
+        mode="async",
+        output="dataframe",
+        timeout=config.weather_fetch_timeout,
+    )
+    previous_auth = os.environ.get("EFDAUTH")
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as auth_file:
+        json.dump({"usdf_efd": info.model_dump(mode="json")}, auth_file)
+        auth_file.flush()
+        os.environ["EFDAUTH"] = auth_file.name
+        try:
+            return EfdClient(efd_name="usdf_efd", client=influx_client)
+        finally:
+            if previous_auth is None:
+                os.environ.pop("EFDAUTH", None)
+            else:
+                os.environ["EFDAUTH"] = previous_auth
 
 
 async def fetch_weather_data() -> Data:
     """Fetch recent weather data from the EFD."""
-    client = EfdClient(efd_name="usdf_efd")
     temp_query = (
         "SELECT mean(temperatureItem0) AS mean_temperature FROM "
         '"efd"."autogen"."lsst.sal.ESS.temperature" '
@@ -134,23 +159,31 @@ async def fetch_weather_data() -> Data:
         "WHERE salIndex=301 AND time > now() - 1h "
     )
 
-    try:
-        async with asyncio.timeout(config.weather_fetch_timeout):
-            (
-                temperature_result,
-                wind_result,
-                humidity_result,
-                dew_point_result,
-                rain_rate_result,
-            ) = await asyncio.gather(
-                client.influxql_query(temp_query),
-                client.influxql_query(wind_query),
-                client.influxql_query(humidity_query),
-                client.influxql_query(dew_point_query),
-                client.influxql_query(rain_rate_query),
-            )
-    finally:
-        await _close_client(client)
+    async with asyncio.timeout(config.weather_fetch_timeout):
+        token = config.efd_token_file_path.read_text(encoding="utf-8").strip()
+        if not token:
+            raise RuntimeError("EFD token file is empty")
+        discovery = DiscoveryClient()
+        try:
+            info = await discovery.influxdb_credentials("usdf_efd", token)
+            if info is None:
+                raise RuntimeError("Repertoire has no usdf_efd database")
+            async with _create_efd_client(info) as client:
+                (
+                    temperature_result,
+                    wind_result,
+                    humidity_result,
+                    dew_point_result,
+                    rain_rate_result,
+                ) = await asyncio.gather(
+                    client.influxql_query(temp_query),
+                    client.influxql_query(wind_query),
+                    client.influxql_query(humidity_query),
+                    client.influxql_query(dew_point_query),
+                    client.influxql_query(rain_rate_query),
+                )
+        finally:
+            await discovery.aclose()
 
     return Data(
         TIME=_latest_timestamp(
