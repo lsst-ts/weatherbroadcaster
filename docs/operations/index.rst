@@ -37,6 +37,17 @@ The updater reads a Gafaelfawr token with ``read:sasquatch`` scope from
 update. ``WEATHERBROADCASTER_EFD_NAME`` selects the Repertoire database label
 and defaults to ``usdf_efd``. For example, set
 ``WEATHERBROADCASTER_EFD_NAME=usdfdev_efd`` to select the development EFD.
+For example, a development deployment can query the USDF production EFD with:
+
+.. code-block:: yaml
+
+   REPERTOIRE_BASE_URL: "https://usdf-rsp.slac.stanford.edu/repertoire"
+   WEATHERBROADCASTER_EFD_NAME: "usdf_efd"
+
+The mounted token must be valid for the selected Repertoire environment and
+have ``read:sasquatch`` scope; a development token does not automatically grant
+access to production Repertoire.
+
 The token and Repertoire URL are needed only by
 the updater sidecar. Repertoire credentials are passed to the EFD client in a
 temporary, private ``EFDAUTH`` file that is removed after client creation.

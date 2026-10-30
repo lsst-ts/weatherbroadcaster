@@ -138,6 +138,7 @@ def discovery(
     token_path.write_text("secret-token\n")
     monkeypatch.setattr(config, "efd_token_file_path", token_path)
     client = _DiscoveryClient()
+
     monkeypatch.setattr(weather, "DiscoveryClient", lambda: client)
     return client
 
