@@ -56,6 +56,7 @@ async def test_main_does_not_write_cache_after_timeout(
 ) -> None:
     """Test a weather-fetch timeout leaves no cache file behind."""
     weather_data_file_path = tmp_path / "weather.json"
+    weather_data_file_path.write_text("previous weather")
 
     async def fetch_weather_data() -> Data:
         raise TimeoutError
@@ -71,4 +72,4 @@ async def test_main_does_not_write_cache_after_timeout(
     with pytest.raises(TimeoutError):
         await main()
 
-    assert not weather_data_file_path.exists()
+    assert weather_data_file_path.read_text() == "previous weather"
