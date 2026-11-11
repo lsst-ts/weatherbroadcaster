@@ -197,7 +197,7 @@ async def fetch_weather_data() -> Data:
         token = config.efd_token_file_path.read_text(encoding="utf-8").strip()
         if not token:
             raise RuntimeError("EFD token file is empty")
-        discovery = DiscoveryClient()
+        discovery = DiscoveryClient(base_url=config.repertoire_base_url)
         try:
             info = await discovery.influxdb_credentials(config.efd_name, token)
             if info is None:

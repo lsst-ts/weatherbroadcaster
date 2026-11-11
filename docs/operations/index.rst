@@ -32,23 +32,23 @@ EFD authentication
 
 The updater reads a Gafaelfawr token with ``read:sasquatch`` scope from
 ``WEATHERBROADCASTER_EFD_TOKEN_FILE_PATH`` (default:
-``/var/run/secrets/weatherbroadcaster/efd-token``). It uses
-``REPERTOIRE_BASE_URL`` to request fresh credentials from Repertoire on every
-update. ``WEATHERBROADCASTER_EFD_NAME`` selects the Repertoire database label
-and defaults to ``usdf_efd``. For example, set
-``WEATHERBROADCASTER_EFD_NAME=usdfdev_efd`` to select the development EFD.
+``/var/run/secrets/weatherbroadcaster/efd-token``). It requests fresh
+credentials from the USDF production Repertoire service on
+every update. ``WEATHERBROADCASTER_EFD_NAME`` selects the Repertoire database
+label and defaults to ``usdf_efd``. Both USDF development and production
+deployments can query the USDF production EFD with the default setting. Set it
+to ``usdfdev_efd`` to select the development EFD instead. The token must be
+valid for USDF production Repertoire and have ``read:sasquatch`` scope.
+``WEATHERBROADCASTER_REPERTOIRE_BASE_URL`` overrides the Repertoire URL, which
+defaults to ``https://usdf-rsp.slac.stanford.edu/repertoire``.
+
 For example, a development deployment can query the USDF production EFD with:
 
 .. code-block:: yaml
 
-   REPERTOIRE_BASE_URL: "https://usdf-rsp.slac.stanford.edu/repertoire"
    WEATHERBROADCASTER_EFD_NAME: "usdf_efd"
 
-The mounted token must be valid for the selected Repertoire environment and
-have ``read:sasquatch`` scope; a development token does not automatically grant
-access to production Repertoire.
-
-The token and Repertoire URL are needed only by
+The token is needed only by
 the updater sidecar. Repertoire credentials are passed to the EFD client in a
 temporary, private ``EFDAUTH`` file that is removed after client creation.
 

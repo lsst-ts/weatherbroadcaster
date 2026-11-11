@@ -137,9 +137,18 @@ def discovery(
     token_path = tmp_path / "token"
     token_path.write_text("secret-token\n")
     monkeypatch.setattr(config, "efd_token_file_path", token_path)
+    monkeypatch.setattr(
+        config,
+        "repertoire_base_url",
+        "https://usdf-rsp.slac.stanford.edu/repertoire",
+    )
     client = _DiscoveryClient()
 
-    monkeypatch.setattr(weather, "DiscoveryClient", lambda: client)
+    def create_discovery_client(*, base_url: str) -> _DiscoveryClient:
+        assert base_url == config.repertoire_base_url
+        return client
+
+    monkeypatch.setattr(weather, "DiscoveryClient", create_discovery_client)
     return client
 
 
